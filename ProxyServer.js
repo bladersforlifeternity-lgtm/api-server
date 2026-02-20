@@ -5,6 +5,11 @@ const PORT = process.env.PORT || 3000;
 // How many pages of servers to fetch (100 per page)
 const MAX_PAGES = 3;
 
+// Cache to avoid hammering Roblox API and hitting 429 rate limits
+// Stores { data, timestamp } per placeId
+const cache = new Map();
+const CACHE_TTL_MS = 20000; // cache results for 20 seconds
+
 app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "*");
 	next();
@@ -50,6 +55,13 @@ app.get("/servers", async (req, res) => {
 	}
 
 	try {
+		// Serve from cache if fresh enough
+		const cached = cache.get(placeId);
+		if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+			console.log(`Cache hit for placeId ${placeId}`);
+			return res.json(cached.data);
+		}
+
 		let allServers = [];
 		let cursor     = "";
 		let pages      = 0;
@@ -87,12 +99,18 @@ app.get("/servers", async (req, res) => {
 		// Trim to requested limit
 		const servers = allServers.slice(0, limit);
 
-		return res.json({
+		const responseData = {
 			placeId,
 			total:   allServers.length,
 			count:   servers.length,
 			servers,
-		});
+		};
+
+		// Store in cache
+		cache.set(placeId, { data: responseData, timestamp: Date.now() });
+		console.log(`Fetched ${servers.length} servers for placeId ${placeId}, cached for ${CACHE_TTL_MS/1000}s`);
+
+		return res.json(responseData);
 
 	} catch (err) {
 		console.error(err);
