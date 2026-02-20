@@ -1,0 +1,15 @@
+{
+  "name": "roblox-server-proxy",
+  "version": "1.0.0",
+  "description": "Proxy that fetches Roblox public server lists for use inside Roblox games via HttpService",
+  "main": "ProxyServer.js",
+  "scripts": {
+    "start": "node ProxyServer.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
